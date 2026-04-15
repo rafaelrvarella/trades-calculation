@@ -159,7 +159,8 @@
             <button class="chip" type="button" data-example="1% do LB">1% do LB</button>
             <button class="chip" type="button" data-example="0,50 do LB no NQ">0,50 do LB no NQ</button>
             <button class="chip" type="button" data-example="2% do OFF no CL">2% do OFF no CL</button>
-            <button class="chip" type="button" data-example="1,25 do EX ESG no WIN">1,25 do EX ESG no WIN</button>
+            <button class="chip" type="button" data-example="1% do OFF EX ESG">1% do OFF EX ESG</button>
+            <button class="chip" type="button" data-example="1% do OFF EX ESG no CL">1% do OFF EX ESG no CL</button>
           </div>
           <div class="status" id="status"></div>
         </div>
@@ -203,6 +204,10 @@
               <span class="k">Financeiro USD</span>
               <div class="v" id="usdValue">—</div>
             </div>
+            <div class="stat hidden" id="twdCard">
+              <span class="k">Financeiro TWD</span>
+              <div class="v" id="twdValue">—</div>
+            </div>
             <div class="stat hidden" id="qtyCard">
               <span class="k">Qtd teórica</span>
               <div class="v" id="qtyValue">—</div>
@@ -229,7 +234,7 @@
       <div class="modal-body">
         <div class="help-card">
           <h3>Como usar</h3>
-          <p>Digite algo como <strong>1% do LB</strong> para ver só o financeiro, ou <strong>0,50 do LB no NQ</strong> para também converter em quantidade teórica do ativo.</p>
+          <p>Digite algo como <strong>1% do LB</strong> para ver só o financeiro, ou <strong>0,50 do LB no NQ</strong> para também converter em quantidade teórica do ativo. O app usa a base real de cada linha: o percentual base do fundo e o USD base do ativo.</p>
           <div class="pills">
             <span class="pill">1% do LB</span>
             <span class="pill">0,50 do LB no NQ</span>
@@ -261,7 +266,7 @@
           <h3>Fundos base</h3>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Fundo</th><th>Base</th><th>BRL</th><th>USD</th></tr></thead>
+              <thead><tr><th>Fundo</th><th>% base</th><th>BRL</th><th>USD</th><th>TWD</th></tr></thead>
               <tbody id="fundTableBody"></tbody>
             </table>
           </div>
@@ -321,6 +326,8 @@
       usdValue: document.getElementById("usdValue"),
       qtyValue: document.getElementById("qtyValue"),
       qtyRoundedValue: document.getElementById("qtyRoundedValue"),
+      twdValue: document.getElementById("twdValue"),
+      twdCard: document.getElementById("twdCard"),
       qtyCard: document.getElementById("qtyCard"),
       qtyRoundedCard: document.getElementById("qtyRoundedCard"),
       summary: document.getElementById("summary"),
@@ -375,6 +382,13 @@
       return Number.isFinite(num) ? num : null;
     }
 
+    function normalizePctBase(value){
+      const num = toNumber(value);
+      if(num === null) return null;
+      if(num > 0 && num <= 1) return num * 100;
+      return num;
+    }
+
     function formatBRL(value){
       return new Intl.NumberFormat("pt-BR", {style:"currency", currency:"BRL", maximumFractionDigits:0}).format(value);
     }
@@ -411,6 +425,10 @@
       els.qtyRoundedCard.classList.toggle("hidden", !show);
     }
 
+    function showTwdCard(show){
+      els.twdCard.classList.toggle("hidden", !show);
+    }
+
     function setSource(sourceText, updatedText){
       els.sourceBadge.textContent = sourceText;
       els.updatedBadge.textContent = "Atualizada em: " + (updatedText || "—");
@@ -440,12 +458,14 @@
       if(els.fundSelect.options.length > 0) els.fundSelect.selectedIndex = 0;
       els.brlValue.textContent = "—";
       els.usdValue.textContent = "—";
+      els.twdValue.textContent = "—";
       els.qtyValue.textContent = "—";
       els.qtyRoundedValue.textContent = "—";
       els.summary.textContent = dataLoaded ? "Base carregada. Preencha os campos ou use a busca rápida." : "Carregue uma base para começar.";
       els.copyFeedback.textContent = "";
       lastResultText = "";
       showAssetCards(false);
+      showTwdCard(false);
     }
 
     function loadDataFromJson(json, sourceLabel){
@@ -457,10 +477,12 @@
 
       for(const row of fundosArr){
         const fundo = normalizeSpaces(pick(row, ["fundo","fund","name","nome"]));
+        const pctBase = normalizePctBase(pick(row, ["pct","percent","percentual","%"]));
         const brl = toNumber(pick(row, ["brl"]));
         const usd = toNumber(pick(row, ["usd"]));
-        if(fundo && brl !== null && usd !== null){
-          nextFunds[fundo] = { brl, usd };
+        const twd = toNumber(pick(row, ["twd"]));
+        if(fundo && pctBase !== null && pctBase > 0 && brl !== null && usd !== null){
+          nextFunds[fundo] = { pctBase, brl, usd, twd };
         }
       }
 
@@ -469,7 +491,7 @@
         const name = normalizeSpaces(pick(row, ["name","nome","descricao"])) || ativo;
         const usdRef = toNumber(pick(row, ["usd","usd_ref","usdref"]));
         const qtyRef = toNumber(pick(row, ["quantidade","qtd","qty","quantity"]));
-        if(ativo && usdRef !== null && qtyRef !== null){
+        if(ativo && usdRef !== null && usdRef > 0 && qtyRef !== null){
           nextAssets[ativo] = { name, usdRef, qtyRef };
         }
       }
@@ -490,7 +512,7 @@
         els.fundSelect.appendChild(option);
 
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${name}</td><td>1%</td><td>${formatBRL(funds[name].brl)}</td><td>${formatUSD(funds[name].usd)}</td>`;
+        tr.innerHTML = `<td>${name}</td><td>${formatNumber(funds[name].pctBase, 2)}%</td><td>${formatBRL(funds[name].brl)}</td><td>${formatUSD(funds[name].usd)}</td><td>${funds[name].twd !== null && funds[name].twd !== undefined ? formatNumber(funds[name].twd, 0) : "—"}</td>`;
         els.fundTableBody.appendChild(tr);
       });
 
@@ -605,7 +627,7 @@
       }
 
       const fund = els.fundSelect.value;
-      const percent = parsePercent(els.percentInput.value);
+      const inputPct = parsePercent(els.percentInput.value);
       const asset = normalizeAssetName(els.assetInput.value);
 
       if(!fund){
@@ -613,7 +635,7 @@
         return;
       }
 
-      if(percent === null){
+      if(inputPct === null || inputPct <= 0){
         setStatus("Digite um percentual válido.", "error");
         return;
       }
@@ -624,50 +646,50 @@
       }
 
       const baseFund = funds[fund];
-      const brl = Math.round(baseFund.brl * percent);
-      const usd = Math.round(baseFund.usd * percent);
+      const factor = inputPct / baseFund.pctBase;
+
+      const brl = Math.round(baseFund.brl * factor);
+      const usd = Math.round(baseFund.usd * factor);
+      const hasTwd = baseFund.twd !== null && baseFund.twd !== undefined;
+      const twd = hasTwd ? Math.round(baseFund.twd * factor) : null;
 
       els.brlValue.textContent = formatBRL(brl);
       els.usdValue.textContent = formatUSD(usd);
 
+      if(hasTwd){
+        showTwdCard(true);
+        els.twdValue.textContent = formatNumber(twd, 0);
+      } else {
+        showTwdCard(false);
+        els.twdValue.textContent = "—";
+      }
+
       if(asset){
         const a = assets[asset];
-        const usdMillions = usd / 1000000;
-        const qtyExact = (usdMillions / a.usdRef) * a.qtyRef;
+        const qtyExact = (usd / a.usdRef) * a.qtyRef;
         const qtyRounded = Math.round(qtyExact);
 
         showAssetCards(true);
         els.qtyValue.textContent = formatNumber(qtyExact, 2);
         els.qtyRoundedValue.textContent = formatNumber(qtyRounded, 0);
-        els.summary.textContent = `${formatNumber(percent, 2)}% do ${fund} corresponde a ${formatBRL(brl)} e ${formatUSD(usd)}. No ${asset}, isso equivale a ${formatNumber(qtyExact, 2)} contrato(s) teóricos, ou ${formatNumber(qtyRounded, 0)} arredondado(s).`;
-        lastResultText = `${formatNumber(percent, 2)}% do ${fund} no ${asset} = ${formatBRL(brl)} | ${formatUSD(usd)} | qtd teórica ${formatNumber(qtyExact, 2)} | qtd arredondada ${formatNumber(qtyRounded, 0)}`;
+
+        let summary = `${formatNumber(inputPct, 2)}% do ${fund} corresponde a ${formatBRL(brl)} e ${formatUSD(usd)}`;
+        if(hasTwd) summary += ` e ${formatNumber(twd, 0)} TWD`;
+        summary += `. No ${asset}, usando a base real de USD ${formatNumber(a.usdRef, 2)}, isso equivale a ${formatNumber(qtyExact, 2)} contrato(s) teóricos, ou ${formatNumber(qtyRounded, 0)} arredondado(s).`;
+        els.summary.textContent = summary;
+
+        lastResultText = `${formatNumber(inputPct, 2)}% do ${fund} = ${formatBRL(brl)} | ${formatUSD(usd)}${hasTwd ? " | " + formatNumber(twd, 0) + " TWD" : ""} | ${asset}: qtd teórica ${formatNumber(qtyExact, 2)} | qtd arredondada ${formatNumber(qtyRounded, 0)}`;
       } else {
         showAssetCards(false);
-        els.summary.textContent = `${formatNumber(percent, 2)}% do ${fund} corresponde a ${formatBRL(brl)} e ${formatUSD(usd)}.`;
-        lastResultText = `${formatNumber(percent, 2)}% do ${fund} = ${formatBRL(brl)} | ${formatUSD(usd)}`;
+        let summary = `${formatNumber(inputPct, 2)}% do ${fund} corresponde a ${formatBRL(brl)} e ${formatUSD(usd)}`;
+        if(hasTwd) summary += ` e ${formatNumber(twd, 0)} TWD`;
+        summary += `.`;
+        els.summary.textContent = summary;
+
+        lastResultText = `${formatNumber(inputPct, 2)}% do ${fund} = ${formatBRL(brl)} | ${formatUSD(usd)}${hasTwd ? " | " + formatNumber(twd, 0) + " TWD" : ""}`;
       }
 
-      setStatus("Cálculo atualizado.", "ok");
-    }
-
-    function applySmartInput(){
-      if(!dataLoaded){
-        setStatus("Carregue a base primeiro.", "warn");
-        return;
-      }
-
-      const parsed = parseSmartInput(els.smartInput.value);
-      if(!parsed) return;
-
-      if(parsed.error){
-        setStatus(parsed.error, "error");
-        return;
-      }
-
-      els.fundSelect.value = parsed.fund;
-      els.percentInput.value = String(parsed.percent).replace(".", ",");
-      els.assetInput.value = parsed.asset || "";
-      calculate();
+      setStatus(`Cálculo atualizado usando base de ${formatNumber(baseFund.pctBase, 2)}% para o fundo.`, "ok");
     }
 
     async function copyResult(){
@@ -743,6 +765,7 @@
     });
 
     showAssetCards(false);
+    showTwdCard(false);
     tryAutoLoad();
   </script>
 </body>
