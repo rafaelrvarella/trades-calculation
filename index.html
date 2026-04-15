@@ -83,6 +83,8 @@
     .stat .k{display:block;color:var(--muted);font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
     .stat .v{font-size:clamp(16px,4.6vw,24px);font-weight:800;letter-spacing:-.04em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:clip;font-variant-numeric:tabular-nums}
     .copy-feedback{color:var(--muted);font-size:12px;min-height:16px;margin-top:10px;line-height:1.4}
+.quick-copy{margin-top:10px}
+.quick-copy .btn{min-height:42px;font-size:14px}
     .hidden{display:none !important}
     .modal-backdrop{
       position:fixed;inset:0;background:rgba(3,8,18,.72);backdrop-filter:blur(6px);
@@ -201,6 +203,11 @@
             </div>
           </div>
           <div class="copy-feedback" id="copyFeedback"></div>
+          <div class="actions quick-copy">
+            <button class="btn secondary" id="copyBrlBtn" type="button">Copiar BRL</button>
+            <button class="btn secondary" id="copyUsdBtn" type="button">Copiar USD</button>
+            <button class="btn secondary hidden" id="copyQtyBtn" type="button">Copiar Qtd</button>
+          </div>
         </div>
       </div>
     </div>
@@ -294,6 +301,7 @@
     let assets = {};
     let lastResultText = "";
     let dataLoaded = false;
+    let lastValues = { brl: null, usd: null, qtyRounded: null };
 
     const els = {
       fundSelect: document.getElementById("fundSelect"),
@@ -302,6 +310,9 @@
       calcBtn: document.getElementById("calcBtn"),
       clearBtn: document.getElementById("clearBtn"),
       copyBtn: document.getElementById("copyBtn"),
+      copyBrlBtn: document.getElementById("copyBrlBtn"),
+      copyUsdBtn: document.getElementById("copyUsdBtn"),
+      copyQtyBtn: document.getElementById("copyQtyBtn"),
       importBtn: document.getElementById("importBtn"),
       fileInput: document.getElementById("fileInput"),
       brlValue: document.getElementById("brlValue"),
@@ -381,6 +392,16 @@
       return new Intl.NumberFormat("pt-BR", {minimumFractionDigits:0, maximumFractionDigits:decimals}).format(value);
     }
 
+    function formatPlainNumber(value, decimals = 2){
+      if(value === null || value === undefined || Number.isNaN(value)) return "";
+      const rounded = Number(value);
+      const isInteger = Math.abs(rounded - Math.round(rounded)) < 1e-9;
+      return new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: isInteger ? 0 : 0,
+        maximumFractionDigits: isInteger ? 0 : decimals
+      }).format(rounded);
+    }
+
     function formatUpdatedAt(value){
       const text = normalizeSpaces(value);
       if(!text) return "—";
@@ -403,6 +424,7 @@
     function showAssetCards(show){
       els.qtyCard.classList.toggle("hidden", !show);
       els.qtyRoundedCard.classList.toggle("hidden", !show);
+      els.copyQtyBtn.classList.toggle("hidden", !show);
     }
 
     function setSource(sourceText, updatedText){
@@ -438,6 +460,7 @@
       els.summary.textContent = dataLoaded ? "Base carregada. Preencha os campos ou use a busca rápida." : "Carregue uma base para começar.";
       els.copyFeedback.textContent = "";
       lastResultText = "";
+      lastValues = { brl: null, usd: null, qtyRounded: null };
       showAssetCards(false);
     }
 
@@ -461,7 +484,7 @@
       for(const row of ativosArr){
         const ativo = normalizeSpaces(pick(row, ["ativo","ticker","code","codigo"]));
         const name = normalizeSpaces(pick(row, ["name","nome","descricao"])) || ativo;
-        const usdRef = toNumber(pick(row, ["usd","usd_ref","usdref"]));
+        const usdRef = toNumber(pick(row, ["usd_m","usd","usd_ref","usdref"]));
         const qtyRef = toNumber(pick(row, ["quantidade","qtd","qty","quantity"]));
         if(ativo && usdRef !== null && usdRef > 0 && qtyRef !== null){
           nextAssets[ativo] = { name, usdRef, qtyRef };
@@ -592,6 +615,9 @@
 
       const brl = Math.round(baseFund.brl * factor);
       const usd = Math.round(baseFund.usd * factor);
+      lastValues.brl = brl;
+      lastValues.usd = usd;
+      lastValues.qtyRounded = null;
       els.brlValue.textContent = formatBRL(brl);
       els.usdValue.textContent = formatUSD(usd);
 
@@ -602,6 +628,7 @@
         const qtyRounded = Math.round(qtyExact);
 
         showAssetCards(true);
+        lastValues.qtyRounded = qtyRounded;
         els.qtyValue.textContent = formatNumber(qtyExact, 2);
         els.qtyRoundedValue.textContent = formatNumber(qtyRounded, 0);
 
@@ -628,6 +655,19 @@
       try{
         await navigator.clipboard.writeText(lastResultText);
         setCopyFeedback("Resultado copiado.");
+      } catch {
+        setCopyFeedback("Não consegui copiar automaticamente. Tente de novo.");
+      }
+    }
+
+    async function copyRawValue(value, label, decimals = 2){
+      if(value === null || value === undefined){
+        setCopyFeedback(`Nada para copiar em ${label}.`);
+        return;
+      }
+      try{
+        await navigator.clipboard.writeText(formatPlainNumber(value, decimals));
+        setCopyFeedback(`${label} copiado.`);
       } catch {
         setCopyFeedback("Não consegui copiar automaticamente. Tente de novo.");
       }
@@ -666,6 +706,9 @@
     els.calcBtn.addEventListener("click", calculate);
     els.clearBtn.addEventListener("click", () => { clearAll(); setStatus(""); });
     els.copyBtn.addEventListener("click", copyResult);
+    els.copyBrlBtn.addEventListener("click", () => copyRawValue(lastValues.brl, "BRL", 2));
+    els.copyUsdBtn.addEventListener("click", () => copyRawValue(lastValues.usd, "USD", 2));
+    els.copyQtyBtn.addEventListener("click", () => copyRawValue(lastValues.qtyRounded, "Quantidade", 0));
     els.importBtn.addEventListener("click", () => els.fileInput.click());
     els.fileInput.addEventListener("change", e => {
       const file = e.target.files && e.target.files[0];
