@@ -276,7 +276,7 @@
           <h3>Tabela de ativos</h3>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Ativo</th><th>Nome</th><th>USD ref</th><th>Qtd ref</th></tr></thead>
+              <thead><tr><th>Ativo</th><th>Nome</th><th>USD ref (MM)</th><th>Qtd ref</th></tr></thead>
               <tbody id="assetTableBody"></tbody>
             </table>
           </div>
@@ -522,7 +522,7 @@
         els.assetList.appendChild(opt);
 
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${code}</td><td>${obj.name}</td><td>${formatNumber(obj.usdRef, 2)}</td><td>${formatNumber(obj.qtyRef, 0)}</td>`;
+        tr.innerHTML = `<td>${code}</td><td>${obj.name}</td><td>${formatNumber(obj.usdRef, 2)} MM</td><td>${formatNumber(obj.qtyRef, 0)}</td>`;
         els.assetTableBody.appendChild(tr);
       });
 
@@ -666,7 +666,7 @@
 
       if(asset){
         const a = assets[asset];
-        const qtyExact = (usd / a.usdRef) * a.qtyRef;
+        const qtyExact = (usd / (a.usdRef * 1000000)) * a.qtyRef;
         const qtyRounded = Math.round(qtyExact);
 
         showAssetCards(true);
@@ -675,7 +675,7 @@
 
         let summary = `${formatNumber(inputPct, 2)}% do ${fund} corresponde a ${formatBRL(brl)} e ${formatUSD(usd)}`;
         if(hasTwd) summary += ` e ${formatNumber(twd, 0)} TWD`;
-        summary += `. No ${asset}, usando a base real de USD ${formatNumber(a.usdRef, 2)}, isso equivale a ${formatNumber(qtyExact, 2)} contrato(s) teóricos, ou ${formatNumber(qtyRounded, 0)} arredondado(s).`;
+        summary += `. No ${asset}, usando a base real de USD ${formatNumber(a.usdRef, 2)} MM, isso equivale a ${formatNumber(qtyExact, 2)} contrato(s) teóricos, ou ${formatNumber(qtyRounded, 0)} arredondado(s).`;
         els.summary.textContent = summary;
 
         lastResultText = `${formatNumber(inputPct, 2)}% do ${fund} = ${formatBRL(brl)} | ${formatUSD(usd)}${hasTwd ? " | " + formatNumber(twd, 0) + " TWD" : ""} | ${asset}: qtd teórica ${formatNumber(qtyExact, 2)} | qtd arredondada ${formatNumber(qtyRounded, 0)}`;
