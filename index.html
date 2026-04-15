@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Calculadora Fundo + Ativo</title>
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#121a2b; --panel2:#18233a; --text:#eef3ff; --muted:#9fb0d1;
+      --line:#263553; --accent:#58c4ff; --ok:#7ef0c8; --warn:#ffd479; --danger:#ff9f9f;
+      --shadow:0 18px 40px rgba(0,0,0,.24);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;width:100%;overflow-x:hidden}
+    body{
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(88,196,255,.14), transparent 28%),
+        radial-gradient(circle at top left, rgba(126,240,200,.08), transparent 24%),
+        var(--bg);
+      color:var(--text); min-height:100vh; -webkit-text-size-adjust:100%;
+    }
+    .wrap{width:100%;max-width:980px;margin:0 auto;padding:12px 12px calc(22px + env(safe-area-inset-bottom))}
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      border:1px solid rgba(255,255,255,.06); box-shadow:var(--shadow); border-radius:22px;
+      overflow:hidden; backdrop-filter:blur(12px);
+    }
+    .hero{
+      padding:18px 14px 14px;
+      background:linear-gradient(180deg, rgba(88,196,255,.08), rgba(126,240,200,.04));
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    h1{margin:0 0 8px;font-size:26px;line-height:1.06;letter-spacing:-.02em}
+    .sub{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+    .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .badge{
+      display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;
+      background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+      font-size:12px;color:var(--text);min-height:32px
+    }
+    .body{padding:12px;display:grid;gap:12px}
+    .section{
+      background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+      border-radius:16px;padding:12px
+    }
+    .section-title{margin:0 0 10px;font-size:15px}
+    .label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px}
+    .stack{display:grid;gap:10px}
+    input,select,button{
+      width:100%;min-height:48px;border-radius:14px;border:none;outline:none;font-size:16px
+    }
+    input,select{
+      padding:0 13px;background:var(--panel2);color:var(--text);border:1px solid var(--line)
+    }
+    input::placeholder{color:#8293b7}
+    .actions{display:grid;gap:10px;grid-template-columns:1fr;margin-top:10px}
+    .btn{
+      cursor:pointer;font-weight:700;transition:.16s transform ease;
+      box-shadow:0 10px 20px rgba(0,0,0,.16)
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{background:linear-gradient(135deg, var(--accent), #7aa7ff);color:#04101f}
+    .btn.secondary{background:#202d49;color:var(--text);border:1px solid #33456b}
+    .btn.ghost{
+      width:auto;min-height:40px;padding:0 14px;border-radius:12px;background:rgba(255,255,255,.08);
+      color:var(--text);border:1px solid rgba(255,255,255,.12);box-shadow:none;font-size:14px;white-space:nowrap
+    }
+    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .chip{
+      border:1px solid #31415f;background:#162137;color:#d9e5ff;border-radius:999px;
+      padding:9px 11px;font-size:12px;cursor:pointer;user-select:none
+    }
+    .status{margin-top:10px;min-height:18px;font-size:12px;color:var(--muted);line-height:1.4}
+    .status.error{color:var(--danger)} .status.ok{color:var(--ok)} .status.warn{color:var(--warn)}
+    .summary{color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:10px;word-break:break-word}
+    .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .stat{
+      border-radius:14px;padding:12px;background:linear-gradient(180deg, rgba(88,196,255,.06), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08);min-height:96px
+    }
+    .stat .k{display:block;color:var(--muted);font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
+    .stat .v{font-size:22px;font-weight:800;letter-spacing:-.03em;line-height:1.1;word-break:break-word}
+    .copy-feedback{color:var(--muted);font-size:12px;min-height:16px;margin-top:10px;line-height:1.4}
+    .hidden{display:none !important}
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(3,8,18,.72);backdrop-filter:blur(6px);
+      display:flex;align-items:flex-end;justify-content:center;padding:16px;z-index:50
+    }
+    .modal{
+      width:100%;max-width:860px;max-height:min(88vh, 900px);overflow:auto;border-radius:22px;
+      background:linear-gradient(180deg, #141d31, #0f1728);border:1px solid rgba(255,255,255,.08);
+      box-shadow:0 20px 50px rgba(0,0,0,.35)
+    }
+    .modal-head{
+      position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:12px;
+      padding:14px;background:rgba(15,23,40,.96);border-bottom:1px solid rgba(255,255,255,.08)
+    }
+    .modal-title{margin:0;font-size:16px}
+    .modal-body{padding:14px;display:grid;gap:14px}
+    .help-card{
+      background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+      border-radius:16px;padding:12px
+    }
+    .help-card h3{margin:0 0 8px;font-size:14px}
+    .help-card p{margin:0 0 8px;color:var(--muted);font-size:13px;line-height:1.45}
+    .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .pill{
+      display:inline-block;padding:6px 10px;border-radius:999px;background:#162137;
+      border:1px solid #31415f;font-size:11px;color:#d9e5ff
+    }
+    .table-wrap{
+      width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px;
+      border:1px solid rgba(255,255,255,.08)
+    }
+    table{width:100%;min-width:560px;border-collapse:collapse;background:rgba(255,255,255,.02)}
+    th,td{padding:10px 11px;text-align:left;border-bottom:1px solid rgba(255,255,255,.07);font-size:12px;white-space:nowrap}
+    th{color:#dce7ff;background:rgba(255,255,255,.04);position:sticky;top:0}
+    .small-note{color:var(--muted);font-size:12px;line-height:1.4;margin-top:8px}
+    @media (min-width:700px){
+      .wrap{padding:18px 18px 28px}
+      .body{padding:16px;gap:16px}
+      .section{padding:14px}
+      .form-grid{display:grid;grid-template-columns:1.1fr .7fr 1.1fr .7fr;gap:12px;align-items:end}
+      .actions{grid-template-columns:1fr 1fr}
+      .stats{grid-template-columns:1fr 1fr 1fr 1fr}
+      h1{font-size:32px}.sub{font-size:14px}.stat .v{font-size:28px}
+      .modal-backdrop{align-items:center}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="hero">
+        <div class="hero-top">
+          <div>
+            <h1>Calculadora Fundo + Ativo</h1>
+            <p class="sub">Esta versão lê o arquivo <strong>bases.json</strong>. Se o carregamento automático falhar, use <strong>Importar JSON</strong>.</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="btn ghost" id="importBtn" type="button">Importar JSON</button>
+            <button class="btn ghost" id="helpBtn" type="button">Ajuda</button>
+          </div>
+        </div>
+        <div class="meta">
+          <div class="badge" id="sourceBadge">Base: carregando...</div>
+          <div class="badge" id="updatedBadge">Atualizada em: —</div>
+        </div>
+      </div>
+
+      <div class="body">
+        <div class="section">
+          <h2 class="section-title">Busca rápida</h2>
+          <label class="label" for="smartInput">Digite em linguagem natural</label>
+          <input id="smartInput" type="text" placeholder="Ex.: 0,50 do LB no NQ" />
+          <div class="chips">
+            <button class="chip" type="button" data-example="1% do LB">1% do LB</button>
+            <button class="chip" type="button" data-example="0,50 do LB no NQ">0,50 do LB no NQ</button>
+            <button class="chip" type="button" data-example="2% do OFF no CL">2% do OFF no CL</button>
+            <button class="chip" type="button" data-example="1,25 do EX ESG no WIN">1,25 do EX ESG no WIN</button>
+          </div>
+          <div class="status" id="status"></div>
+        </div>
+
+        <div class="section">
+          <h2 class="section-title">Preenchimento manual</h2>
+          <div class="stack form-grid">
+            <div>
+              <label class="label" for="fundSelect">Fundo</label>
+              <select id="fundSelect"></select>
+            </div>
+            <div>
+              <label class="label" for="percentInput">% do fundo</label>
+              <input id="percentInput" type="text" inputmode="decimal" placeholder="Ex.: 0,50" />
+            </div>
+            <div>
+              <label class="label" for="assetInput">Ativo (opcional)</label>
+              <input id="assetInput" type="text" list="assetList" placeholder="Ex.: NQ, CL, WIN..." />
+              <datalist id="assetList"></datalist>
+            </div>
+            <div>
+              <label class="label">&nbsp;</label>
+              <button class="btn primary" id="calcBtn" type="button">Calcular</button>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn secondary" id="copyBtn" type="button">Copiar resultado</button>
+            <button class="btn secondary" id="clearBtn" type="button">Limpar</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2 class="section-title">Resultado</h2>
+          <div class="summary" id="summary">Carregue uma base para começar.</div>
+          <div class="stats">
+            <div class="stat">
+              <span class="k">Financeiro BRL</span>
+              <div class="v" id="brlValue">—</div>
+            </div>
+            <div class="stat">
+              <span class="k">Financeiro USD</span>
+              <div class="v" id="usdValue">—</div>
+            </div>
+            <div class="stat hidden" id="qtyCard">
+              <span class="k">Qtd teórica</span>
+              <div class="v" id="qtyValue">—</div>
+            </div>
+            <div class="stat hidden" id="qtyRoundedCard">
+              <span class="k">Qtd arredondada</span>
+              <div class="v" id="qtyRoundedValue">—</div>
+            </div>
+          </div>
+          <div class="copy-feedback" id="copyFeedback"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="fileInput" accept=".json,application/json" class="hidden" />
+
+  <div class="modal-backdrop hidden" id="helpModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 class="modal-title">Ajuda</h2>
+        <button class="btn ghost" id="closeHelpBtn" type="button">Fechar</button>
+      </div>
+      <div class="modal-body">
+        <div class="help-card">
+          <h3>Como usar</h3>
+          <p>Digite algo como <strong>1% do LB</strong> para ver só o financeiro, ou <strong>0,50 do LB no NQ</strong> para também converter em quantidade teórica do ativo.</p>
+          <div class="pills">
+            <span class="pill">1% do LB</span>
+            <span class="pill">0,50 do LB no NQ</span>
+            <span class="pill">2% do OFF no CL</span>
+            <span class="pill">1,25 do EX ESG no WIN</span>
+          </div>
+        </div>
+
+        <div class="help-card">
+          <h3>Atalhos de ativos</h3>
+          <div class="pills">
+            <span class="pill">NQ = NQA</span>
+            <span class="pill">MNQ = HWBA</span>
+            <span class="pill">ES = ESA</span>
+            <span class="pill">MES = HWAA</span>
+            <span class="pill">WIN = XBA</span>
+            <span class="pill">IND = BZA</span>
+            <span class="pill">CL = CLA</span>
+            <span class="pill">MCL = WMIK6</span>
+            <span class="pill">DAX = GXA</span>
+            <span class="pill">STOXX = VGA</span>
+            <span class="pill">BRL = BRA</span>
+            <span class="pill">BRENT = COA</span>
+          </div>
+          <div class="small-note">Você também pode digitar o código completo ou o nome completo do ativo que vier no JSON.</div>
+        </div>
+
+        <div class="help-card">
+          <h3>Fundos base</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Fundo</th><th>Base</th><th>BRL</th><th>USD</th></tr></thead>
+              <tbody id="fundTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="help-card">
+          <h3>Tabela de ativos</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Ativo</th><th>Nome</th><th>USD ref</th><th>Qtd ref</th></tr></thead>
+              <tbody id="assetTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="help-card">
+          <h3>Fluxo recomendado</h3>
+          <p>Exporte o <strong>bases.json</strong> pelo Excel e deixe esse arquivo junto com o HTML. No computador, basta substituir o JSON. No celular, o mesmo link continua funcionando.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const assetAliases = {
+      "NQ":"NQA Index","NQA":"NQA Index","NASDAQ":"NQA Index","NASDAQ100":"NQA Index",
+      "MNQ":"HWBA Index","RTY":"RTYA Index","RTYA":"RTYA Index","ES":"ESA Index",
+      "SP500":"ESA Index","S&P500":"ESA Index","MES":"HWAA Index","WIN":"XBA Index",
+      "XBA":"XBA Index","IND":"BZA Index","BZA":"BZA Index","STOXX":"VGA Index",
+      "VGA":"VGA Index","DAX":"GXA Index","GXA":"GXA Index","BRL":"BRA Curncy",
+      "BRA":"BRA Curncy","BRENT":"COA Comdty","COA":"COA Comdty","MCL":"WMIK6 Comdty",
+      "CL":"CLA Comdty","WTI":"CLA Comdty","CLA":"CLA Comdty","CORN":"C A Comdty",
+      "TTF":"TZTA Comdty","TZTA":"TZTA Comdty"
+    };
+
+    const fundAliases = {
+      "EXESG":"EX ESG","EX ESG":"EX ESG","OFFEXESG":"OFF EX ESG",
+      "OFF EX ESG":"OFF EX ESG","LBD":"LB-D","LB-D":"LB-D"
+    };
+
+    let funds = {};
+    let assets = {};
+    let lastResultText = "";
+    let dataLoaded = false;
+
+    const els = {
+      smartInput: document.getElementById("smartInput"),
+      fundSelect: document.getElementById("fundSelect"),
+      percentInput: document.getElementById("percentInput"),
+      assetInput: document.getElementById("assetInput"),
+      calcBtn: document.getElementById("calcBtn"),
+      clearBtn: document.getElementById("clearBtn"),
+      copyBtn: document.getElementById("copyBtn"),
+      importBtn: document.getElementById("importBtn"),
+      fileInput: document.getElementById("fileInput"),
+      brlValue: document.getElementById("brlValue"),
+      usdValue: document.getElementById("usdValue"),
+      qtyValue: document.getElementById("qtyValue"),
+      qtyRoundedValue: document.getElementById("qtyRoundedValue"),
+      qtyCard: document.getElementById("qtyCard"),
+      qtyRoundedCard: document.getElementById("qtyRoundedCard"),
+      summary: document.getElementById("summary"),
+      status: document.getElementById("status"),
+      copyFeedback: document.getElementById("copyFeedback"),
+      fundTableBody: document.getElementById("fundTableBody"),
+      assetTableBody: document.getElementById("assetTableBody"),
+      assetList: document.getElementById("assetList"),
+      helpBtn: document.getElementById("helpBtn"),
+      helpModal: document.getElementById("helpModal"),
+      closeHelpBtn: document.getElementById("closeHelpBtn"),
+      sourceBadge: document.getElementById("sourceBadge"),
+      updatedBadge: document.getElementById("updatedBadge")
+    };
+
+    function normalizeSpaces(text){
+      return String(text ?? "").replace(/\s+/g, " ").trim();
+    }
+
+    function compact(text){
+      return normalizeSpaces(text.toUpperCase())
+        .replace(/\./g, "")
+        .replace(/\s*-\s*/g, "-")
+        .replace(/[^A-Z0-9&-]/g, "");
+    }
+
+    function pick(obj, keys){
+      for(const key of keys){
+        if(obj && Object.prototype.hasOwnProperty.call(obj, key) && obj[key] !== null && obj[key] !== ""){
+          return obj[key];
+        }
+      }
+      return null;
+    }
+
+    function toNumber(value){
+      if(typeof value === "number") return Number.isFinite(value) ? value : null;
+      const txt = String(value ?? "").trim();
+      if(!txt) return null;
+
+      const hasComma = txt.includes(",");
+      const hasDot = txt.includes(".");
+
+      let cleaned = txt;
+      if(hasComma && hasDot){
+        cleaned = txt.replace(/\./g, "").replace(",", ".");
+      } else if(hasComma){
+        cleaned = txt.replace(",", ".");
+      }
+
+      const num = Number(cleaned);
+      return Number.isFinite(num) ? num : null;
+    }
+
+    function formatBRL(value){
+      return new Intl.NumberFormat("pt-BR", {style:"currency", currency:"BRL", maximumFractionDigits:0}).format(value);
+    }
+
+    function formatUSD(value){
+      return new Intl.NumberFormat("en-US", {style:"currency", currency:"USD", maximumFractionDigits:0}).format(value);
+    }
+
+    function formatNumber(value, decimals = 2){
+      return new Intl.NumberFormat("pt-BR", {minimumFractionDigits:0, maximumFractionDigits:decimals}).format(value);
+    }
+
+    function formatUpdatedAt(value){
+      const text = normalizeSpaces(value);
+      if(!text) return "—";
+      const parsed = new Date(text.replace(" ", "T"));
+      if(!isNaN(parsed.getTime())){
+        return new Intl.DateTimeFormat("pt-BR", {dateStyle:"short", timeStyle:"short"}).format(parsed);
+      }
+      return text;
+    }
+
+    function setStatus(message = "", kind = ""){
+      els.status.textContent = message;
+      els.status.className = "status" + (kind ? " " + kind : "");
+    }
+
+    function setCopyFeedback(message = ""){
+      els.copyFeedback.textContent = message;
+    }
+
+    function showAssetCards(show){
+      els.qtyCard.classList.toggle("hidden", !show);
+      els.qtyRoundedCard.classList.toggle("hidden", !show);
+    }
+
+    function setSource(sourceText, updatedText){
+      els.sourceBadge.textContent = sourceText;
+      els.updatedBadge.textContent = "Atualizada em: " + (updatedText || "—");
+    }
+
+    function openHelp(){
+      els.helpModal.classList.remove("hidden");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeHelp(){
+      els.helpModal.classList.add("hidden");
+      document.body.style.overflow = "";
+    }
+
+    function resetUIDataAreas(){
+      els.fundSelect.innerHTML = "";
+      els.assetList.innerHTML = "";
+      els.fundTableBody.innerHTML = "";
+      els.assetTableBody.innerHTML = "";
+    }
+
+    function clearAll(){
+      els.smartInput.value = "";
+      els.percentInput.value = "";
+      els.assetInput.value = "";
+      if(els.fundSelect.options.length > 0) els.fundSelect.selectedIndex = 0;
+      els.brlValue.textContent = "—";
+      els.usdValue.textContent = "—";
+      els.qtyValue.textContent = "—";
+      els.qtyRoundedValue.textContent = "—";
+      els.summary.textContent = dataLoaded ? "Base carregada. Preencha os campos ou use a busca rápida." : "Carregue uma base para começar.";
+      els.copyFeedback.textContent = "";
+      lastResultText = "";
+      showAssetCards(false);
+    }
+
+    function loadDataFromJson(json, sourceLabel){
+      const fundosArr = Array.isArray(json?.fundos) ? json.fundos : [];
+      const ativosArr = Array.isArray(json?.ativos) ? json.ativos : [];
+
+      const nextFunds = {};
+      const nextAssets = {};
+
+      for(const row of fundosArr){
+        const fundo = normalizeSpaces(pick(row, ["fundo","fund","name","nome"]));
+        const brl = toNumber(pick(row, ["brl"]));
+        const usd = toNumber(pick(row, ["usd"]));
+        if(fundo && brl !== null && usd !== null){
+          nextFunds[fundo] = { brl, usd };
+        }
+      }
+
+      for(const row of ativosArr){
+        const ativo = normalizeSpaces(pick(row, ["ativo","ticker","code","codigo"]));
+        const name = normalizeSpaces(pick(row, ["name","nome","descricao"])) || ativo;
+        const usdRef = toNumber(pick(row, ["usd","usd_ref","usdref"]));
+        const qtyRef = toNumber(pick(row, ["quantidade","qtd","qty","quantity"]));
+        if(ativo && usdRef !== null && qtyRef !== null){
+          nextAssets[ativo] = { name, usdRef, qtyRef };
+        }
+      }
+
+      if(!Object.keys(nextFunds).length) throw new Error("Nenhum fundo válido foi encontrado no JSON.");
+      if(!Object.keys(nextAssets).length) throw new Error("Nenhum ativo válido foi encontrado no JSON.");
+
+      funds = nextFunds;
+      assets = nextAssets;
+      dataLoaded = true;
+
+      resetUIDataAreas();
+
+      Object.keys(funds).forEach(name => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        els.fundSelect.appendChild(option);
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${name}</td><td>1%</td><td>${formatBRL(funds[name].brl)}</td><td>${formatUSD(funds[name].usd)}</td>`;
+        els.fundTableBody.appendChild(tr);
+      });
+
+      Object.entries(assets).forEach(([code, obj]) => {
+        const opt = document.createElement("option");
+        opt.value = code;
+        els.assetList.appendChild(opt);
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${code}</td><td>${obj.name}</td><td>${formatNumber(obj.usdRef, 2)}</td><td>${formatNumber(obj.qtyRef, 0)}</td>`;
+        els.assetTableBody.appendChild(tr);
+      });
+
+      setSource(sourceLabel, formatUpdatedAt(json?.updated_at));
+      clearAll();
+      setStatus("Base carregada com sucesso.", "ok");
+    }
+
+    function normalizeFundName(text){
+      let cleaned = normalizeSpaces(text.toUpperCase())
+        .replace(/\./g, "")
+        .replace(/\s*-\s*/g, "-")
+        .replace(/\bDO\b/g, "")
+        .replace(/\bDA\b/g, "")
+        .replace(/\bDE\b/g, "")
+        .replace(/\bFUNDO\b/g, "")
+        .trim();
+
+      const noSpaces = cleaned.replace(/\s+/g, "");
+      if(fundAliases[cleaned]) return fundAliases[cleaned];
+      if(fundAliases[noSpaces]) return fundAliases[noSpaces];
+
+      const exact = Object.keys(funds).find(name => name.toUpperCase() === cleaned);
+      if(exact) return exact;
+
+      return Object.keys(funds).find(name => compact(name) === compact(cleaned)) || null;
+    }
+
+    function normalizeAssetName(text){
+      if(!text) return null;
+      const raw = normalizeSpaces(text);
+      const up = raw.toUpperCase();
+      const key = compact(raw);
+
+      if(assets[raw]) return raw;
+
+      const alias = assetAliases[key];
+      if(alias && assets[alias]) return alias;
+
+      const exact = Object.keys(assets).find(code => code.toUpperCase() === up);
+      if(exact) return exact;
+
+      const compactCode = Object.keys(assets).find(code => compact(code) === key);
+      if(compactCode) return compactCode;
+
+      const byName = Object.entries(assets).find(([code, obj]) => compact(obj.name) === key);
+      if(byName) return byName[0];
+
+      const partial = Object.entries(assets).filter(([code, obj]) =>
+        code.toUpperCase().includes(up) || obj.name.toUpperCase().includes(up)
+      );
+      if(partial.length === 1) return partial[0][0];
+
+      return null;
+    }
+
+    function parsePercent(value){
+      if(typeof value !== "string") value = String(value ?? "");
+      const cleaned = value.replace("%", "").replace(",", ".").trim();
+      const num = Number(cleaned);
+      return Number.isFinite(num) ? num : null;
+    }
+
+    function parseSmartInput(text){
+      const original = normalizeSpaces(text);
+      if(!original) return null;
+
+      const percentMatch = original.match(/(\d+(?:[.,]\d+)?)\s*%?/i);
+      if(!percentMatch) return { error: "Não consegui identificar o percentual. Ex.: 0,50 do LB no NQ" };
+
+      const percent = parsePercent(percentMatch[1]);
+      if(percent === null) return { error: "Percentual inválido." };
+
+      let rest = original.slice(percentMatch.index + percentMatch[0].length).trim();
+      rest = rest.replace(/^(do|da|de)\s+/i, "").replace(/^fundo\s+/i, "").trim();
+
+      let fundText = rest;
+      let assetText = "";
+
+      const splitMatch = rest.match(/^(.*?)(?:\s+(?:no|na|em)\s+(?:ativo\s+)?)((?:.+))$/i);
+      if(splitMatch){
+        fundText = splitMatch[1].trim();
+        assetText = splitMatch[2].trim();
+      }
+
+      const fund = normalizeFundName(fundText);
+      if(!fund) return { error: "Não reconheci o fundo." };
+
+      const asset = assetText ? normalizeAssetName(assetText) : null;
+      if(assetText && !asset) return { error: "Não reconheci o ativo." };
+
+      return { percent, fund, asset };
+    }
+
+    function calculate(){
+      setStatus("");
+      setCopyFeedback("");
+
+      if(!dataLoaded){
+        setStatus("Carregue a base primeiro.", "warn");
+        return;
+      }
+
+      const fund = els.fundSelect.value;
+      const percent = parsePercent(els.percentInput.value);
+      const asset = normalizeAssetName(els.assetInput.value);
+
+      if(!fund){
+        setStatus("Selecione um fundo.", "error");
+        return;
+      }
+
+      if(percent === null){
+        setStatus("Digite um percentual válido.", "error");
+        return;
+      }
+
+      if(els.assetInput.value.trim() && !asset){
+        setStatus("Não reconheci o ativo digitado.", "error");
+        return;
+      }
+
+      const baseFund = funds[fund];
+      const brl = Math.round(baseFund.brl * percent);
+      const usd = Math.round(baseFund.usd * percent);
+
+      els.brlValue.textContent = formatBRL(brl);
+      els.usdValue.textContent = formatUSD(usd);
+
+      if(asset){
+        const a = assets[asset];
+        const usdMillions = usd / 1000000;
+        const qtyExact = (usdMillions / a.usdRef) * a.qtyRef;
+        const qtyRounded = Math.round(qtyExact);
+
+        showAssetCards(true);
+        els.qtyValue.textContent = formatNumber(qtyExact, 2);
+        els.qtyRoundedValue.textContent = formatNumber(qtyRounded, 0);
+        els.summary.textContent = `${formatNumber(percent, 2)}% do ${fund} corresponde a ${formatBRL(brl)} e ${formatUSD(usd)}. No ${asset}, isso equivale a ${formatNumber(qtyExact, 2)} contrato(s) teóricos, ou ${formatNumber(qtyRounded, 0)} arredondado(s).`;
+        lastResultText = `${formatNumber(percent, 2)}% do ${fund} no ${asset} = ${formatBRL(brl)} | ${formatUSD(usd)} | qtd teórica ${formatNumber(qtyExact, 2)} | qtd arredondada ${formatNumber(qtyRounded, 0)}`;
+      } else {
+        showAssetCards(false);
+        els.summary.textContent = `${formatNumber(percent, 2)}% do ${fund} corresponde a ${formatBRL(brl)} e ${formatUSD(usd)}.`;
+        lastResultText = `${formatNumber(percent, 2)}% do ${fund} = ${formatBRL(brl)} | ${formatUSD(usd)}`;
+      }
+
+      setStatus("Cálculo atualizado.", "ok");
+    }
+
+    function applySmartInput(){
+      if(!dataLoaded){
+        setStatus("Carregue a base primeiro.", "warn");
+        return;
+      }
+
+      const parsed = parseSmartInput(els.smartInput.value);
+      if(!parsed) return;
+
+      if(parsed.error){
+        setStatus(parsed.error, "error");
+        return;
+      }
+
+      els.fundSelect.value = parsed.fund;
+      els.percentInput.value = String(parsed.percent).replace(".", ",");
+      els.assetInput.value = parsed.asset || "";
+      calculate();
+    }
+
+    async function copyResult(){
+      if(!lastResultText){
+        setCopyFeedback("Ainda não há resultado para copiar.");
+        return;
+      }
+      try{
+        await navigator.clipboard.writeText(lastResultText);
+        setCopyFeedback("Resultado copiado.");
+      } catch {
+        setCopyFeedback("Não consegui copiar automaticamente. Tente de novo.");
+      }
+    }
+
+    async function tryAutoLoad(){
+      try{
+        const response = await fetch("./bases.json", { cache: "no-store" });
+        if(!response.ok) throw new Error("Arquivo não encontrado");
+        const json = await response.json();
+        loadDataFromJson(json, "Base: automática");
+      } catch {
+        setSource("Base: não carregada", "—");
+        clearAll();
+        setStatus("Não consegui carregar automaticamente o bases.json. Use Importar JSON.", "warn");
+      }
+    }
+
+    function handleImportedFile(file){
+      if(!file) return;
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        try{
+          const json = JSON.parse(reader.result);
+          loadDataFromJson(json, "Base: importada");
+        } catch {
+          setStatus("Arquivo JSON inválido.", "error");
+        }
+      };
+
+      reader.onerror = () => setStatus("Não consegui ler o arquivo selecionado.", "error");
+      reader.readAsText(file, "utf-8");
+    }
+
+    els.calcBtn.addEventListener("click", calculate);
+    els.clearBtn.addEventListener("click", () => { clearAll(); setStatus(""); });
+    els.copyBtn.addEventListener("click", copyResult);
+    els.importBtn.addEventListener("click", () => els.fileInput.click());
+    els.fileInput.addEventListener("change", e => {
+      const file = e.target.files && e.target.files[0];
+      handleImportedFile(file);
+      e.target.value = "";
+    });
+
+    els.helpBtn.addEventListener("click", openHelp);
+    els.closeHelpBtn.addEventListener("click", closeHelp);
+    els.helpModal.addEventListener("click", e => { if(e.target === els.helpModal) closeHelp(); });
+    document.addEventListener("keydown", e => {
+      if(e.key === "Escape" && !els.helpModal.classList.contains("hidden")) closeHelp();
+    });
+
+    els.smartInput.addEventListener("keydown", e => { if(e.key === "Enter") applySmartInput(); });
+    els.smartInput.addEventListener("blur", () => { if(els.smartInput.value.trim()) applySmartInput(); });
+    els.percentInput.addEventListener("keydown", e => { if(e.key === "Enter") calculate(); });
+    els.assetInput.addEventListener("keydown", e => { if(e.key === "Enter") calculate(); });
+
+    document.querySelectorAll(".chip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        els.smartInput.value = btn.dataset.example;
+        applySmartInput();
+      });
+    });
+
+    showAssetCards(false);
+    tryAutoLoad();
+  </script>
+</body>
+</html>
