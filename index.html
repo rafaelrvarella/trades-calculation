@@ -151,7 +151,6 @@
       </div>
 
       <div class="body">
-
         <div class="section">
           <h2 class="section-title">Preenchimento manual</h2>
           <div class="stack form-grid">
@@ -177,6 +176,7 @@
             <button class="btn secondary" id="copyBtn" type="button">Copiar resultado</button>
             <button class="btn secondary" id="clearBtn" type="button">Limpar</button>
           </div>
+          <div class="status" id="status"></div>
         </div>
 
         <div class="section">
@@ -311,6 +311,7 @@
       qtyCard: document.getElementById("qtyCard"),
       qtyRoundedCard: document.getElementById("qtyRoundedCard"),
       summary: document.getElementById("summary"),
+      status: document.getElementById("status"),
       copyFeedback: document.getElementById("copyFeedback"),
       fundTableBody: document.getElementById("fundTableBody"),
       assetTableBody: document.getElementById("assetTableBody"),
@@ -391,10 +392,8 @@
     }
 
     function setStatus(message = "", kind = ""){
-      const el = document.getElementById("status");
-      if(!el) return;
-      el.textContent = message;
-      el.className = "status" + (kind ? " " + kind : "");
+      els.status.textContent = message;
+      els.status.className = "status" + (kind ? " " + kind : "");
     }
 
     function setCopyFeedback(message = ""){
@@ -429,7 +428,6 @@
     }
 
     function clearAll(){
-      els.smartInput.value = "";
       els.percentInput.value = "";
       els.assetInput.value = "";
       if(els.fundSelect.options.length > 0) els.fundSelect.selectedIndex = 0;
@@ -560,14 +558,6 @@
       return Number.isFinite(num) ? num : null;
     }
 
-      const fund = normalizeFundName(fundText);
-      if(!fund) return { error: "Não reconheci o fundo." };
-
-      const asset = assetText ? normalizeAssetName(assetText) : null;
-      if(assetText && !asset) return { error: "Não reconheci o ativo." };
-
-      return { percent, fund, asset };
-    }
 
     function calculate(){
       setStatus("");
@@ -689,6 +679,9 @@
     document.addEventListener("keydown", e => {
       if(e.key === "Escape" && !els.helpModal.classList.contains("hidden")) closeHelp();
     });
+
+    els.percentInput.addEventListener("keydown", e => { if(e.key === "Enter") calculate(); });
+    els.assetInput.addEventListener("keydown", e => { if(e.key === "Enter") calculate(); });
 
     showAssetCards(false);
     tryAutoLoad();
