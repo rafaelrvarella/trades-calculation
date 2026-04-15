@@ -81,7 +81,7 @@
       border:1px solid rgba(255,255,255,.08);min-height:96px
     }
     .stat .k{display:block;color:var(--muted);font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
-    .stat .v{font-size:22px;font-weight:800;letter-spacing:-.03em;line-height:1.1;word-break:break-word}
+    .stat .v{font-size:clamp(16px,4.6vw,24px);font-weight:800;letter-spacing:-.04em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:clip;font-variant-numeric:tabular-nums}
     .copy-feedback{color:var(--muted);font-size:12px;min-height:16px;margin-top:10px;line-height:1.4}
     .hidden{display:none !important}
     .modal-backdrop{
@@ -125,7 +125,7 @@
       .form-grid{display:grid;grid-template-columns:1.1fr .7fr 1.1fr .7fr;gap:12px;align-items:end}
       .actions{grid-template-columns:1fr 1fr}
       .stats{grid-template-columns:1fr 1fr 1fr 1fr}
-      h1{font-size:32px}.sub{font-size:14px}.stat .v{font-size:28px}
+      h1{font-size:32px}.sub{font-size:14px}.stat .v{font-size:24px}
       .modal-backdrop{align-items:center}
     }
   </style>
@@ -204,10 +204,6 @@
               <span class="k">Financeiro USD</span>
               <div class="v" id="usdValue">—</div>
             </div>
-            <div class="stat hidden" id="twdCard">
-              <span class="k">Financeiro TWD</span>
-              <div class="v" id="twdValue">—</div>
-            </div>
             <div class="stat hidden" id="qtyCard">
               <span class="k">Qtd teórica</span>
               <div class="v" id="qtyValue">—</div>
@@ -266,7 +262,7 @@
           <h3>Fundos base</h3>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Fundo</th><th>% base</th><th>BRL</th><th>USD</th><th>TWD</th></tr></thead>
+              <thead><tr><th>Fundo</th><th>% base</th><th>BRL</th><th>USD</th></tr></thead>
               <tbody id="fundTableBody"></tbody>
             </table>
           </div>
@@ -326,8 +322,6 @@
       usdValue: document.getElementById("usdValue"),
       qtyValue: document.getElementById("qtyValue"),
       qtyRoundedValue: document.getElementById("qtyRoundedValue"),
-      twdValue: document.getElementById("twdValue"),
-      twdCard: document.getElementById("twdCard"),
       qtyCard: document.getElementById("qtyCard"),
       qtyRoundedCard: document.getElementById("qtyRoundedCard"),
       summary: document.getElementById("summary"),
@@ -425,10 +419,6 @@
       els.qtyRoundedCard.classList.toggle("hidden", !show);
     }
 
-    function showTwdCard(show){
-      els.twdCard.classList.toggle("hidden", !show);
-    }
-
     function setSource(sourceText, updatedText){
       els.sourceBadge.textContent = sourceText;
       els.updatedBadge.textContent = "Atualizada em: " + (updatedText || "—");
@@ -458,14 +448,12 @@
       if(els.fundSelect.options.length > 0) els.fundSelect.selectedIndex = 0;
       els.brlValue.textContent = "—";
       els.usdValue.textContent = "—";
-      els.twdValue.textContent = "—";
       els.qtyValue.textContent = "—";
       els.qtyRoundedValue.textContent = "—";
       els.summary.textContent = dataLoaded ? "Base carregada. Preencha os campos ou use a busca rápida." : "Carregue uma base para começar.";
       els.copyFeedback.textContent = "";
       lastResultText = "";
       showAssetCards(false);
-      showTwdCard(false);
     }
 
     function loadDataFromJson(json, sourceLabel){
@@ -660,9 +648,7 @@
         showTwdCard(true);
         els.twdValue.textContent = formatNumber(twd, 0);
       } else {
-        showTwdCard(false);
-        els.twdValue.textContent = "—";
-      }
+          }
 
       if(asset){
         const a = assets[asset];
@@ -673,20 +659,16 @@
         els.qtyValue.textContent = formatNumber(qtyExact, 2);
         els.qtyRoundedValue.textContent = formatNumber(qtyRounded, 0);
 
-        let summary = `${formatNumber(inputPct, 2)}% do ${fund} corresponde a ${formatBRL(brl)} e ${formatUSD(usd)}`;
-        if(hasTwd) summary += ` e ${formatNumber(twd, 0)} TWD`;
-        summary += `. No ${asset}, usando a base real de USD ${formatNumber(a.usdRef, 2)} MM, isso equivale a ${formatNumber(qtyExact, 2)} contrato(s) teóricos, ou ${formatNumber(qtyRounded, 0)} arredondado(s).`;
+        let summary = `${formatNumber(inputPct, 2)}% do ${fund} corresponde a ${formatBRL(brl)} e ${formatUSD(usd)}.`;
+        summary += ` No ${asset}, usando a base real de USD ${formatNumber(a.usdRef, 2)} MM, isso equivale a ${formatNumber(qtyExact, 2)} contrato(s) teóricos, ou ${formatNumber(qtyRounded, 0)} arredondado(s).`;
         els.summary.textContent = summary;
 
-        lastResultText = `${formatNumber(inputPct, 2)}% do ${fund} = ${formatBRL(brl)} | ${formatUSD(usd)}${hasTwd ? " | " + formatNumber(twd, 0) + " TWD" : ""} | ${asset}: qtd teórica ${formatNumber(qtyExact, 2)} | qtd arredondada ${formatNumber(qtyRounded, 0)}`;
+        lastResultText = `${formatNumber(inputPct, 2)}% do ${fund} = ${formatBRL(brl)} | ${formatUSD(usd)} | ${asset}: qtd teórica ${formatNumber(qtyExact, 2)} | qtd arredondada ${formatNumber(qtyRounded, 0)}`;
       } else {
         showAssetCards(false);
-        let summary = `${formatNumber(inputPct, 2)}% do ${fund} corresponde a ${formatBRL(brl)} e ${formatUSD(usd)}`;
-        if(hasTwd) summary += ` e ${formatNumber(twd, 0)} TWD`;
-        summary += `.`;
-        els.summary.textContent = summary;
+        els.summary.textContent = `${formatNumber(inputPct, 2)}% do ${fund} corresponde a ${formatBRL(brl)} e ${formatUSD(usd)}.`;
 
-        lastResultText = `${formatNumber(inputPct, 2)}% do ${fund} = ${formatBRL(brl)} | ${formatUSD(usd)}${hasTwd ? " | " + formatNumber(twd, 0) + " TWD" : ""}`;
+        lastResultText = `${formatNumber(inputPct, 2)}% do ${fund} = ${formatBRL(brl)} | ${formatUSD(usd)}`;
       }
 
       setStatus(`Cálculo atualizado usando base de ${formatNumber(baseFund.pctBase, 2)}% para o fundo.`, "ok");
@@ -765,7 +747,6 @@
     });
 
     showAssetCards(false);
-    showTwdCard(false);
     tryAutoLoad();
   </script>
 </body>
